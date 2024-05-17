@@ -1,0 +1,22 @@
+Question 1
+
+Need to find substrings that start with a prefix and and with a suffix
+
+Use a prefix tree
+
+setup O(N^2)
+
+
+
+Get all substrings starting with pre
+Get all substrings starting with post
+
+
+complexty O(pre, post, output)
+
+
+Question 2
+
+
+
+complexty O()
