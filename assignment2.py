@@ -50,6 +50,7 @@ class OrfFinder:
 
     def __init__(self, genome) -> None:   
         self.tree = SLPrefixTree(self.CHARACTERS, genome, self.KEY)
+        self.genome = genome
 
     def find(self, start, end) -> list:
         pre = self.tree.get(start)
@@ -61,7 +62,6 @@ class OrfFinder:
         return substrings
     
     def match_substrings(self, pre, post, startLen, endLen):
-        print (pre,post)
         i = 0
         j = len(post)-1
 
@@ -71,19 +71,20 @@ class OrfFinder:
             matched = False
             j = len(post)-1
 
-            while j >= 0 and pre[i] + startLen < post[j]:
-                res.append((pre[i], pre[j]+endLen))
+            while j >= 0 and pre[i] + startLen -1 < post[j]:
+                res.append((pre[i], post[j]+endLen))
                 j-=1
                 
             if matched == False:
                 return res
+            i +=1
             
         return res
 
     def retrieve_substrings(self, substrings):
         res = []
         for s in substrings:
-            res.append(self.refString[s[0], s[1]])
+            res.append(self.genome[s[0]:s[1]])
         return res
     
 
@@ -257,8 +258,8 @@ def allocate(preferences, officers_per_org, min_shifts, max_shifts):
 
 
 if __name__ == '__main__':
-    o = OrfFinder("AABBCCDDAA")
-    print(o.find('A','D'))
+    o = OrfFinder("AAABAAABBCCDDAA")
+    print(o.find('AB','A'))
     # f = FlowNetwork(2)
     # f.insert(0,1,10)
     # print(f.fordFulkerson(0, 1))
