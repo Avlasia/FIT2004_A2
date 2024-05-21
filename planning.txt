@@ -1,0 +1,76 @@
+==Question 1
+
+Need to find substrings that start with a prefix and and with a suffix
+
+Use a prefix tree
+
+=setup O(N^2)
+
+    At each node store array of subsequent nodes
+    Store in sorted order
+
+
+=retrieval O(pre, post, output)
+    get_substrings(pre)
+    get_substrings(post)
+    return construct() 
+
+
+=get_substrings O(n)
+use prefix tree, return array at that node
+
+
+=construct O(output)
+Given two sorted arrays 
+    pre  [...]
+    post [...]
+If the first value in pre is sufficietly smaller than the last value in post, add the substring [pre:post].
+If the value in pre is not sufficietly early, then:
+    If a string was added for pre: move to next pre
+    If no string was added yet: terminate
+return output
+
+
+
+==Question 2
+allocate(preference, officers_per_org, min_shifts,max_shifts)
+officers is n
+companies is m
+
+=shift setup O(c)
+Needed for shifts in next step
+
+=createAllocateFN
+Set up flow network as follows:
+
+Supersource   -----min_shifts----> 
+    |
+res_shits                            person -bool-> day -bool-> shifts -bool> Supersink
+    v
+node     --max_shifts-min_shifts-->
+
+res_shits = total(opo) - min_shifts*(n) | Is the remainding shifts to be allocated
+
+
+=fordFulkerson O(EF)
+w/ DFS
+
+Complexity Analysis From lecture:
+Cost of finding an augmenting path:​
+    Using BFS, cost is O(V+E) (or just O(E) since the graph is connected).​
+Augmenting flow along a path:​
+    length of path ≤ V, so cost is O(V).​
+Updating the residual:​
+    Same amount of work as updating the flows along the augmenting path, O(V).​
+
+Total work in one iteration of the loop:​ O(V+E) = O(E).
+
+O(F) iterations
+Therefore O(EF) complexity
+
+Analysis in terms of question:
+Edges = n
+Sol. = n
+
+=allocation O()
+O(retrieval*n)
