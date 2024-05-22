@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 inf = float('inf')
 
 # QUESTION 1: Open Reading Frames
@@ -110,6 +111,7 @@ class FNEdge:
 
 class FlowNetwork(AdjacencyListGraph):
     def insert(self, u, t, capacity):
+
         forward = FNEdge(t, capacity)
         back = FNEdge(u, 0, forward)
         forward.reverse = back
@@ -117,33 +119,39 @@ class FlowNetwork(AdjacencyListGraph):
         self.graph[u].append(forward)
         self.graph[t].append(back)
 
+        self.maxFlow = False #Flag to check if current flows are max
+
+    def __getattribute__(self, name: str) -> Any:
+        return super().__getattribute__(name)
+
 
     def DFSAugment(self, u, t, bottleneck):
         if u==t:
-            return [t], bottleneck
+            return bottleneck
 
         self.visited[u] = True
         for e in self.get_adjacent(u):
             available = e.capacity - e.flow
             if available > 0 and self.visited[e.edge] == False:
-                route, augment = self.DFSAugment(e.edge, t, min(bottleneck, available))
+                # print('hiii', available, e, sep=':')
+                augment = self.DFSAugment(e.edge, t, min(bottleneck, available))
                 if augment > 0:
                     e.flow += augment
                     e.reverse.flow -= augment
-                    return route.append(t), augment
+                    return augment
         return 0
 
 
     def fordFulkerson(self, s, t):
         flow = 0
         augment = 1
-        backroutes = []
         while augment > 0:
             self.visited = [False for _ in range(len(self.graph))]
-            route, augment = self.DFSAugment(s, t, inf)
+            augment = self.DFSAugment(s, t, inf)
             flow += augment
-            backroutes.append(route)
-        return flow, backroutes
+
+        self.maxFlow = True
+        return flow
 
 
 #Solution
@@ -152,11 +160,19 @@ DAYS = 30
 
 def sum_shifts(officers_per_org):
     total = 0
+    shiftTotals = [0] * SHIFTS
+    shiftRequests = [[] for _ in range(SHIFTS)]
     for org in officers_per_org:
-        total +=sum(org)
-    return total
+        for shift in range(SHIFTS):
+            shiftTotals[shift] += org[shift]
+            shiftRequests[shift].append(org[shift])
+        total += sum(org)*DAYS
 
-def makeAllocateNetwork(preferences, totalShifts, officers_per_org, min_shifts, max_shifts) -> FlowNetwork:
+    # shiftTotals = [s*DAYS for s in shiftTotals]
+    # print(shiftTotals)
+    return total, shiftTotals, shiftRequests
+
+def makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_shifts) -> FlowNetwork:
     """edge ranges: 
         0 supersource, 
         1 excess source, 
@@ -166,19 +182,23 @@ def makeAllocateNetwork(preferences, totalShifts, officers_per_org, min_shifts, 
         30*n + 2 (incl.)
     """
     n = len(preferences)
-    m = len(officers_per_org)
+    # m = len(officers_per_org)
 
     pI = 2
     pdI = pI + n
     dsI = pdI + n*DAYS
-    scI = dsI + DAYS*SHIFTS
-    tI = scI + SHIFTS*m
+    tI = dsI + DAYS*SHIFTS
+    # scI = dsI + DAYS*SHIFTS
+    # tI = dsI + SHIFTS*m
+
 
     nodes = tI+1
     network = FlowNetwork(nodes)
 
     #excess shift edge
     network.insert(0, 1, totalShifts - n*min_shifts)
+    print(totalShifts - n*min_shifts)
+    
 
     #For each officer
     for officer in range(n):
@@ -198,17 +218,51 @@ def makeAllocateNetwork(preferences, totalShifts, officers_per_org, min_shifts, 
                 if preferences[officer][shift]:
                     network.insert(pdI + officer*DAYS + day, dsI + SHIFTS*day + shift, 1)
 
-    #Shift-Company edges                   
+    print(network.get_adjacent(0))
+
     for day in range(DAYS):  
         for shift in range(SHIFTS):      
-            for company in range(m):
-                network.insert(dsI + SHIFTS*day + shift, scI + SHIFTS*company + shift, officers_per_org[company][shift]) #ds - cs
+            network.insert(dsI + SHIFTS*day + shift, tI, shiftTotals[shift]) #ds - cs
     
-    #Company sink edges
-    for company in range(m):        
-        network.insert(scI + SHIFTS*company + shift, tI, inf)
+    return tI, network
+    
 
-def makeAllocationList(n, m, selections):
+    # #Shift-Company edges                   
+    # for day in range(DAYS):  
+    #     for shift in range(SHIFTS):      
+    #         for company in range(m):
+    #             network.insert(dsI + SHIFTS*day + shift, scI + SHIFTS*company + shift, officers_per_org[company][shift]) #ds - cs
+    
+    # #Company sink edges
+    # for company in range(m):        
+    #     network.insert(scI + SHIFTS*company + shift, tI, inf)
+
+#Allocation Helper Functions
+def getTrueEdge(network, i):
+    for edge in network.get_adjacent(i):
+        if edge.capacity > 0 and edge.flow == 1: 
+            return edge
+    return None
+    
+def makeRequests(shiftRequest):
+    return [[shiftRequest[j].copy() for j in range(SHIFTS)] for _ in range(DAYS)] ##This is aliasing for some reason!!!
+
+# def convertToID(n, m, per, day, ds, com):
+#     #Start indices
+#     pI = 2
+#     pdI = pI + n
+#     dsI = pdI + n*DAYS
+#     tI = dsI + DAYS*SHIFTS
+
+#     i = per - pI
+#     j = day - pdI - i*DAYS
+#     d = ds - dsI - j*SHIFTS
+#     k = (com - scI - d)//SHIFTS
+
+#     return i,j,d,k
+
+
+def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
     """Otherwise, it returns a list of lists allocation, where allocation[i][j][d][k] is equal
     to 1 if 
     security officer SOi
@@ -216,50 +270,89 @@ def makeAllocationList(n, m, selections):
     during shift Sk 
     on day Dd."""
 
-    """Selections will look like [0)sink, 1)company, 2)day-shift, 3)day, 4)personnel, ...]"""
 
     #Set up output
-    allocation = [[[[0 for i in range(DAYS) ] for i in range(SHIFTS) ] for i in range(m)] for i in range(n)]
+    allocation = [[[[0 for i in range(SHIFTS) ] for _ in range(DAYS) ] for __ in range(m)] for ___ in range(n)]
 
+    #Set up shift requirements:
+    requests = makeRequests(shiftRequest)
+
+    #Start indices
     pI = 2
     pdI = pI + n
     dsI = pdI + n*DAYS
-    scI = dsI + DAYS*SHIFTS
-    tI = scI + SHIFTS*m
+    tI = dsI + DAYS*SHIFTS
+
     """
     personnel = pI + officer
     day       = pdI + officer*DAYS + day
     day-shift = dsI + SHIFTS*day + shift
     company   = scI + SHIFTS*company + shift
-
-
     """
 
-    for selection in selections:
-        i = selection[4] - pI
-        j = selection[3] - pdI - i*DAYS
-        d = selection[2] - dsI - j*SHIFTS
-        k = (selection[1] - scI - d)//SHIFTS
+    calP = lambda per: per - pI
+    calD = lambda day, i: day - pdI - i*DAYS
+    calS = lambda ds, d: ds - dsI - d*SHIFTS
+    # calC = lambda com, d: (com - scI - d)//SHIFTS
 
-        allocation[i][j][d][k] = 1
+    for personIndex in range(pI, n + pI):
+        # dayEdge = getTrueEdge(network, personIndex)
+        # if dayEdge == None:
+        #     break
+        for dayEdge in network.get_adjacent(personIndex):
+            if dayEdge.capacity > 0 and dayEdge.flow == 1: 
+                shiftEdge = getTrueEdge(network, dayEdge.edge)
+
+                #i,j,d,k = p, c, s, d
+                i = calP(personIndex)
+                d = calD(dayEdge.edge, i)
+                k = calS(shiftEdge.edge, d)
+
+                #print(i,k,d, personIndex, dayEdge, shiftEdge, sep=':')
+                #print(requests)
+                dsRequest = requests[d][k]
+                #print(dsRequest)
+                while dsRequest[-1] <= 0:
+                    dsRequest.pop()
+
+                dsRequest[-1] -= 1
+                j = len(dsRequest) - 1
+
+                allocation[i][j][d][k] = 1
     
     return allocation
 
+def potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
+    n = len(preferences)
+    if len(preferences) < totalShifts:
+        return False
+    if min_shifts*n
+
 def allocate(preferences, officers_per_org, min_shifts, max_shifts):
-    totalShifts = sum_shifts(officers_per_org)
-    network = makeAllocateNetwork(preferences, totalShifts, officers_per_org, min_shifts, max_shifts)
-    
-    selections, flow = network.fordFulkerson()
-    if network.fordFulkerson() != totalShifts:
+    totalShifts, shiftTotals, shiftRequests = sum_shifts(officers_per_org)
+
+    if not potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
+        return False
+
+    t, network = makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_shifts)
+    flow = network.fordFulkerson(0, t)
+
+    if flow != totalShifts:
         return None
     
-    return makeAllocationList(len(preferences), len(officers_per_org), selections)
+    return makeAllocationList(len(preferences), len(officers_per_org), network, shiftRequests)
 
 
 
 if __name__ == '__main__':
-    o = OrfFinder("AAABAAABBCCDDAA")
-    print(o.find('AB','A'))
+    sol = allocate([[1,1,1], [1,1,1],[1,1,1],[1,1,1]], [[1,1,1]], 0, 25)
+
+    #print(sol)
+
+
+    # o = OrfFinder("AAABAAABBCCDDAA")
+    # print(o.find('AB','A'))
+
     # f = FlowNetwork(2)
     # f.insert(0,1,10)
     # print(f.fordFulkerson(0, 1))
