@@ -44,7 +44,6 @@ class SLPrefixTree:
 
         return current.substrings
         
- 
 class OrfFinder:
     CHARACTERS = 4
     KEY = lambda self, x: ord(x) - ord('A')
@@ -251,21 +250,6 @@ def getTrueEdge(network, i):
 def makeRequests(shiftRequest):
     return [[shiftRequest[j].copy() for j in range(SHIFTS)] for _ in range(DAYS)] ##This is aliasing for some reason!!!
 
-# def convertToID(n, m, per, day, ds, com):
-#     #Start indices
-#     pI = 2
-#     pdI = pI + n
-#     dsI = pdI + n*DAYS
-#     tI = dsI + DAYS*SHIFTS
-
-#     i = per - pI
-#     j = day - pdI - i*DAYS
-#     d = ds - dsI - j*SHIFTS
-#     k = (com - scI - d)//SHIFTS
-
-#     return i,j,d,k
-
-
 def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
     """Otherwise, it returns a list of lists allocation, where allocation[i][j][d][k] is equal
     to 1 if 
@@ -326,7 +310,7 @@ def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
     
     return allocation
 
-def potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
+def potSolExists(preferences, min_shifts, max_shifts,totalShifts):
     n = len(preferences)
     if min_shifts*n > totalShifts or totalShifts > max_shifts*n:
         return False
@@ -335,7 +319,7 @@ def potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShif
 def allocate(preferences, officers_per_org, min_shifts, max_shifts):
     totalShifts, shiftTotals, shiftRequests = sum_shifts(officers_per_org)
 
-    if not potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
+    if not potSolExists(preferences, min_shifts, max_shifts,totalShifts):
         return None
 
     t, network = makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_shifts)
