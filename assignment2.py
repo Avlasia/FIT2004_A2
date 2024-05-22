@@ -324,15 +324,15 @@ def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
 
 def potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
     n = len(preferences)
-    if len(preferences) < totalShifts:
+    if min_shifts*n > totalShifts or totalShifts > max_shifts*n:
         return False
-    if min_shifts*n
+
 
 def allocate(preferences, officers_per_org, min_shifts, max_shifts):
     totalShifts, shiftTotals, shiftRequests = sum_shifts(officers_per_org)
 
     if not potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShifts, shiftTotals, shiftRequests):
-        return False
+        return None
 
     t, network = makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_shifts)
     flow = network.fordFulkerson(0, t)
