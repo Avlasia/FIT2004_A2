@@ -57,7 +57,10 @@ class OrfFinder:
         pre = self.tree.get(start)
         post = self.tree.get(end)
 
+        print(pre, post)
+
         substrings = self.match_substrings(pre, post, len(start), len(end))
+        print(substrings)
         substrings = self.retrieve_substrings(substrings)
 
         return substrings
@@ -74,6 +77,7 @@ class OrfFinder:
 
             while j >= 0 and pre[i] + startLen -1 < post[j]:
                 res.append((pre[i], post[j]+endLen))
+                matched = True
                 j-=1
                 
             if matched == False:
@@ -197,7 +201,7 @@ def makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_s
 
     #excess shift edge
     network.insert(0, 1, totalShifts - n*min_shifts)
-    print(totalShifts - n*min_shifts)
+    #print(totalShifts - n*min_shifts)
     
 
     #For each officer
@@ -326,7 +330,7 @@ def potSolExists(preferences, officers_per_org, min_shifts, max_shifts,totalShif
     n = len(preferences)
     if min_shifts*n > totalShifts or totalShifts > max_shifts*n:
         return False
-
+    return True
 
 def allocate(preferences, officers_per_org, min_shifts, max_shifts):
     totalShifts, shiftTotals, shiftRequests = sum_shifts(officers_per_org)
