@@ -56,10 +56,10 @@ class OrfFinder:
         pre = self.tree.get(start)
         post = self.tree.get(end)
 
-        print(pre, post)
+        #print(pre, post)
 
         substrings = self.match_substrings(pre, post, len(start), len(end))
-        print(substrings)
+        #print(substrings)
         substrings = self.retrieve_substrings(substrings)
 
         return substrings
@@ -221,7 +221,7 @@ def makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_s
                 if preferences[officer][shift]:
                     network.insert(pdI + officer*DAYS + day, dsI + SHIFTS*day + shift, 1)
 
-    print(network.get_adjacent(0))
+    #print(network.get_adjacent(0))
 
     for day in range(DAYS):  
         for shift in range(SHIFTS):      
@@ -310,7 +310,7 @@ def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
     
     return allocation
 
-def potSolExists(preferences, min_shifts, max_shifts,totalShifts):
+def potSolExists(preferences, min_shifts, max_shifts, totalShifts):
     n = len(preferences)
     if min_shifts*n > totalShifts or totalShifts > max_shifts*n:
         return False
