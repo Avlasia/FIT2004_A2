@@ -3,12 +3,15 @@ from typing import Any
 inf = float('inf')
 
 
-# QUESTION 1: Open Reading Frames
-
-#Complexity notes: Question 1
+#Complexity notes:
 #   C is the number of characters in the given alphabet; per the specs. C = 4
 #   k be the complexity of the key function that turns the characters into indicies
 #   Assume space complexity is aux space unless otherwise specified
+#   All complexity analysis is based on worst case scenarios
+
+
+# QUESTION 1: Open Reading Frames
+
 
 class SLPrefixNode:
     """
@@ -271,12 +274,12 @@ class OrfFinder:
     def find(self, start, end) -> list:
         """
         Function description:
-            Finds substrings of 'genome' that start and end with a given prefix
+            Finds substrings of 'genome' that start and end with the given strings
 
         Approach:
             Uses the SLPrefixTrie to get:
                 a list of substrings that start with the given prefix (indices) (pre)
-                a list of substrings that end with the given prefix (indices) (post)
+                a list of substrings that end with the given suffix (indices) (post)
 
             Then given those lists compares the first (earliest) prefix with the last (lastest) suffix
             IF the prefix index is far enough before the suffix for there to be a legitimate pair, then add that index pair (as a tuple) to the list of solutions
@@ -287,43 +290,107 @@ class OrfFinder:
             IF at any point a prefix does not pair with any suffix terminate.
                 This is checked with a flag.
 
-            Afterwards, use list splicing to retrieve the strings that correspond to the pairs
+            Afterwards, use list splicing to retrieve the strings that correspond to the pairs. 
 
-        :Input:
+        :Input: 
+        start: the prefix to match
+        end: the suffix to match
+
         :Output, return, post condition:
+        returns a list of substrings that match the provided prefix and suffix
 
 
         Complexity Analysis
-        :Time complexity: 
+            T is the length of start
+            U is the length of end
+            V is the number of characters in the output
+
+        :Time complexity: O(T+U+V)
         :Time complexity analysis:
-        :Space complexity: 
+            SLPrefixTrie get method is O(CN) as descirbed above
+                C is the number of characters which in OrfFinder is constant
+                N is the length of the input
+
+            Thus get(start) is O(T)
+            get(end) is O(U)
+
+            complexity of match_substrings is O(len(output)) (see method docstring below)
+            complexity of retrieve_substrings is O(V) (see method docstring below)
+
+            As retrieve_substrings runs on every output of match_substrings, O(retrive...) >= O(match...)
+
+            Therefore time is O(T, U, V)
+
+        :Space complexity: O(V)
         :Space complexity analysis: 
+            Space complexity is O(V))
+
+            Substring lists are merely referenced, not copied
+            Output lists of match... and retireve... are same length,
+            However, there are V total characters in retireve
+
+            Thus O(V)
+            
         """
         
+        #Get prefix and suffix lists
         pre = self.tree.get(start)
         post = self.tree.get(end)
 
-        #print(pre, post)
-
+        
+        #Match viable prefix and suffix indices together (see match_substrings for more detailed logic)
         substrings = self.match_substrings(pre, post, len(start), len(end))
-        #print(substrings)
+        
+        #Use list splicing to copy out the strings given the start and end indices
         substrings = self.retrieve_substrings(substrings)
 
+        #Return the list of substrings
         return substrings
     
     def match_substrings(self, pre, post, startLen, endLen):
         """
-        Function description:
+        Function description: 
+            Given a list of starting indicies, a list of ending indecies and the number of characters needed after each one, 
+            creates a list of all viable string splices.
         Approach:
-        :Input:
-        :Output, return, post condition:
+            From above:
+            Then given those lists compares the first (earliest) prefix with the last (lastest) suffix
+            IF the prefix index is far enough before the suffix for there to be a legitimate pair, then add that index pair (as a tuple) to the list of solutions
+                then move to the next latest suffix and compare
+            WHEN a suffix is reached that does not match or there are no more suffixes to pair
+                move to the next prefix.
+            IF at any point a prefix does not pair with any suffix terminate.
+                This is checked with a flag.
 
+            
+            A start/pre is sufficiently early if there are 'startLen' characters between it and the end string
+            
+            The corresponding splice can be calculated as (start, end+endlen)
+
+        :Input:
+            pre: the list of substrings that start with the given prefix
+            post: the list of substrings that end with the given prefix
+            startLen: The length of start/prefix
+            endLen: The length of end/post
+        :Output, return, post condition:
+            outputs a list of substrings descibed by their start and ending indices, as descirbed earlier.
 
         Complexity Analysis
-        :Time complexity: 
+        :Time complexity: O(len(output))
         :Time complexity analysis:
-        :Space complexity: 
+            Single loop complexity: 
+                O(1) for arithmatic and comparison 
+                O(1) for calculationg pairs)
+            Number of cycles
+                O(len(output)) for each correct solution
+                Additional O(len(output)) for each faultly start end pair that comes difectly after a correct one. 
+                Additional O(1) for comparing the first prefix with no solutions for early termination.
+
+                Therfore O(len(output)) 
+            
+        :Space complexity: O(len(output))
         :Space complexity analysis: 
+            One additional space is used for every viable solution
         """
         i = 0
         j = len(post)-1
@@ -345,19 +412,24 @@ class OrfFinder:
             
         return res
 
-    def retrieve_substrings(self, substrings):
+    def retrieve_substrings(self, substrings: list[tuple[int,int]]) -> list:
         """
         Function description:
-        Approach:
+            for every index pair in substrings, get the string splice corresponding to that range
         :Input:
+        substrings: a list of pairs of start and end indicies
         :Output, return, post condition:
-
+        List of actual substrings based on given pairs
 
         Complexity Analysis
-        :Time complexity: 
+            V is the length of characters in the correct output
+        :Time complexity: O(V)
         :Time complexity analysis:
-        :Space complexity: 
+            Splicing takes time and space of the number of characters in the slice. 
+            Therefore the time to copy the entire list of substring index pairs is will be the time and space of the entire list of corresponding characters
+        :Space complexity: O(V)
         :Space complexity analysis: 
+            Same as time
         """
         res = []
         for s in substrings:
@@ -366,61 +438,76 @@ class OrfFinder:
     
 
 
+
+
 # QUESTION 1: Open Reading Frames
 class AdjacencyListGraph:
-    
-    def __init__(self, nodes) -> None:
+    """
+    Class Description:
+    Basic adjacency list graph implementation, with get_adjacent() and len() implemented
+
+    Acts as a base for the flow network class
+    Does not have insert implemented because flow network implements its own version.
+    """
+
+    def __init__(self, nodes: int) -> None:
         """
         Function description:
-        Approach:
+        Sets up adjacency list, as a list of empty lists
+        
         :Input:
+        nodes: the number of edges in the graph
         :Output, return, post condition:
-
+        creates empty adjacency representation of a graph with the given amount of nodes, to add edges to later
 
         Complexity Analysis
-        :Time complexity: 
+        :Time complexity: O(nodes)
         :Time complexity analysis:
-        :Space complexity: 
+            Makes a list for every node
+        :Space complexity: O(nodes)
         :Space complexity analysis: 
+            Stores a list for every node
         """
         self.length = nodes
         self.graph = [[] for _ in range(nodes)]
 
-    def get_adjacent(self, s) -> list:
+    def get_adjacent(self, s: int) -> list:
         """
         Function description:
-        Approach:
+            Gets all edges going out of the the given node
+        
         :Input:
+        s: source node
         :Output, return, post condition:
+        returns list of edges
 
 
         Complexity Analysis
-        :Time complexity: 
+        :Time complexity: O(1)
         :Time complexity analysis:
-        :Space complexity: 
+            array access is O(1)
+        :Space complexity: O(1)
         :Space complexity analysis: 
+            Does not need additonal space, just references array
         """
         return self.graph[s]
     
-    def __len__(self):
+    def __len__(self) -> int:
         """
         Function description:
-        Approach:
-        :Input:
-        :Output, return, post condition:
-
+            Returns number of edges in the graph
+            (stored upon initalisation)
 
         Complexity Analysis
-        :Time complexity: 
-        :Time complexity analysis:
-        :Space complexity: 
-        :Space complexity analysis: 
+        :Time complexity: O(1)
+        :Space complexity: O(1)
         """
         return self.length
 
 @dataclass
 class FNEdge:
     """
+    Class Description:
         Function description:
         Approach:
         :Input:
