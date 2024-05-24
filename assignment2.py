@@ -2,25 +2,151 @@ from dataclasses import dataclass
 from typing import Any
 inf = float('inf')
 
+
 # QUESTION 1: Open Reading Frames
+
+#Complexity notes: Question 1
+#   C is the number of characters in the given alphabet; per the specs. C = 4
+#   k be the complexity of the key function that turns the characters into indicies
+#   Assume space complexity is aux space unless otherwise specified
+
 class SLPrefixNode:
-    def __init__(self, characters) -> None:
+    """
+    Class Description:
+    Class for nodes of a 'string list' prefix trie.
+        ie. a prefix trie that stores a list of included strings
+    Each node stores:
+        self.nodes | an array of child nodes
+        self.substrings | an array of strings that pass through this node
+    """
+    
+    def __init__(self, characters : int) -> None:
+        """
+        Function description:
+            Sets up the prefix trie node given a character length
+        :Input:
+            :characters: The size of the alphabet to be used in the prefix trie
+        :Output:
+            node object set up as described by class, substring list is empty
+
+        Complexity Analysis
+            Let C be the value of 'characters'
+        :Time complexity: O(C)
+        :Time complexity analysis: Self nodes is n long, so takes n time to set up
+        :Space complexity: O(C)
+        :Space complexity analysis: Self nodes is n long, substrings is empty
+        """
         self.nodes = [None]*characters
         self.substrings = []
 
-class SLPrefixTree:
+class SLPrefixTrie:
+    """
+    Class Desciption:
 
-    def __init__(self, characters, refString, key) -> None:
+    Creates a prefix trie that also stores a list of substrings starting with that prefix at every node
+    Uses SLPrefixNode for the node implementation
+
+    In initalisation takes a number of characters that may be in the alphabet and a key function that converts characters into indices
+
+    """
+
+    def __init__(self, characters : int, refString : str, key : callable) -> None:
+        """
+        Function description:
+            Sets up a prefix trie, 
+            Uses a naive implementation, adding each string one by one 
+
+        :Input:
+        characters:
+            The highest index outputted by key. 
+            Ideally should be equal to:
+                either the length of the alphabet used for the refrence string, 
+                or the number of unique characters in the refrence string
+            depending on implementation
+        refString: 
+            The string from which to build the prefix tree.
+        key:
+            A function mapping the characters in the input alphabet to unique indicies
+            Should act as a perfect hash for possible imput characters
+        
+        :Output:
+            Createst a prefix tree of the refString, with substring lists as in the class description.
+            Inserts suffixes in order from longest to shortest, resulting in substring lists begin sorted.
+            Also stores input variables.
+        
+        Complexity Analysis
+            let R be the length of refString
+            let C be the length of characters
+            let k be the complexity of the key function
+
+        :Time complexity: O(kCN^2)*
+        :Time complexity analysis:
+            N strings to add in total: 
+            
+            Each string length is upper bound by N
+            Insert is O(kCn), where n is length of string to be added.
+
+            Thus upper bound of O(kCN * N) = O(kCN^2)
+        
+        *Generally, upon implementation, C should be a given constant and k should work in O(1) time, making complexity O(N^2)
+
+        :Space complexity: O(CN^2)
+        :Space complexity analysis:
+            N inserts,
+            O(nC) space where n is length of insert,
+                At each step n is bound by N
+            
+            Therefore O(CN^2)
+        """
         self.characters = characters
         self.refString = refString
         self.key = key
 
-
         self.root = SLPrefixNode(self.characters)
+
+        #Insert every substring into the prefix tree
         for index in range(len(refString)):
             self.insert(index)
 
     def insert(self, index) -> None:
+        """
+        Function description: 
+            Inserts a string into the given prefix trie:
+            Gets string by reference to start index
+
+            Starting at the root, use self.key to find the location in the array that the current character corresponds to
+            If there is no node there yet, create one.
+            Move to that node, add the current substring to the list of substrings
+            Repeat until end of input string is reached
+
+            
+        :Input:
+        index: The starting index of the substring to be inserted (index in reference string)
+
+        :Output, return or postcondition:
+        substring reference inserted as described above
+
+        Complexity Analysis:
+            Let n be length of the substring referenced by index
+                (Can be calculated as len(self.refString) - index)
+            let C be the length of characters
+            let k be the complexity of the key function
+
+        :Time complexity: O(kCn)
+        :Time complexity analysis:
+            Loops through the inserted character (n)
+            for each loop, at worst
+                find node indes with key (k)
+                create node if necessary (O(C))
+                add current node to substring list (O(append))
+
+        :Space complexity: O(nC)
+        :Space complexity analysis:
+            node array takes C spaces. It is possible a new node is added for every character.
+            Adding the substring to the substring list is a total of n new elements. 
+            THEREFORE O(nC + n) = O(n)
+        """
+
         current = self.root
         for i in range(index,len(self.refString)):
             
@@ -33,6 +159,33 @@ class SLPrefixTree:
             current.substrings.append(index)
     
     def get(self, prefix) -> list:
+        """
+        Function description:
+            Searches for the prefix through the prefix tree. 
+            
+            Starting at the root node, match the first character in the node list and move to that node
+            Continue as such until either 
+                a) there is no node at the location:  therefore the prefix cannot be found
+                b) the end of the prefix is reached: return the substring list stored at that node
+
+            For consistancy, if no result is found an empty string is returned.
+
+        :Input:
+        prefix: The prefix to search the string for
+
+        :Return:
+        Returns the list of substrings beginning with the given prefix
+
+        Complexity
+            N is the length of the prefix string
+        :Time complexity: O(kN)
+        :Time complexity analysis:
+            attempts to loop through one node for every character in the prefix (n)
+            at each node uses key to find next one
+            upon termination just returns the pre-assembled array O(1)
+        :Space complexity: O(1)
+        """
+
         current = self.root
         for char in prefix:
             cIndex = self.key(char)
@@ -45,14 +198,108 @@ class SLPrefixTree:
         return current.substrings
         
 class OrfFinder:
+    """
+    Class Description:
+
+    Takes a genome (string comtaining some combination of characters A through D) and sets it up as a 
+    'substring list' prefix tree (see SLPrefixTree class above).
+
+    Has a method 'find' that returns all strings matching a given prefix and suffix
+    """
+
     CHARACTERS = 4
     KEY = lambda self, x: ord(x) - ord('A')
 
-    def __init__(self, genome) -> None:   
-        self.tree = SLPrefixTree(self.CHARACTERS, genome, self.KEY)
+    """ KEY lambda function/method analysis:
+    Function description:
+        Converts a character into a index using ord()
+        See conversions below
+
+    Approach description (if main function):
+    :Input: character
+    :Return:
+        A => 0
+        B => 1
+        C => 2
+        D => 3
+
+    :Time complexity: O(1)
+    :Time complexity analysis:
+        Ord is assumed to be O(1). 
+        Even if it is not, there is a constant/non-variable range of inputs to the function: A-D.
+        Therefore the time will not scale with the input.
+    :Space complexity: O(1)
+    """
+    
+
+    def __init__(self, genome) -> None:  
+        """
+        Function description: Creates SLP trie
+        Approach description (if main function):
+        :Input:
+        genome: The string to be prepped for searching (see specifications)
+
+        :Output, return or postcondition:
+        Sets up a SLPrefixTrie that can be used to match suffix-prefix substrings in the future.
+        See SLPrefixTrie class for further detail
+
+        Complexity Analysis:
+            n is the length of genome
+
+        :Time complexity: O(n^2)
+        :Time complexity analysis:
+            Compleity of SLPrefixTrie initalisation is O(kCN^2)
+            Within OrfFinder: 
+                k is constant (see KEY analysis above)
+                C is constant, equal to 4 (given in specs.)
+                N is the length of the input string, in this case genome
+
+            Therefore: Complexity is O(n^2) where n is the length of the given genome
+
+        :Space complexity: O(N^2)
+        :Space complexity analysis:
+            Space complexity of SLPrefixTrie is O(CN^2)
+            C is constant in this case 
+
+        """
+ 
+        self.tree = SLPrefixTrie(OrfFinder.CHARACTERS, genome, OrfFinder.KEY)
         self.genome = genome
 
+
+
     def find(self, start, end) -> list:
+        """
+        Function description:
+            Finds substrings of 'genome' that start and end with a given prefix
+
+        Approach:
+            Uses the SLPrefixTrie to get:
+                a list of substrings that start with the given prefix (indices) (pre)
+                a list of substrings that end with the given prefix (indices) (post)
+
+            Then given those lists compares the first (earliest) prefix with the last (lastest) suffix
+            IF the prefix index is far enough before the suffix for there to be a legitimate pair, then add that index pair (as a tuple) to the list of solutions
+                then move to the next latest suffix and compare
+            WHEN a suffix is reached that does not match or there are no more suffixes to pair
+                move to the next prefix.
+
+            IF at any point a prefix does not pair with any suffix terminate.
+                This is checked with a flag.
+
+            Afterwards, use list splicing to retrieve the strings that correspond to the pairs
+
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
+        
         pre = self.tree.get(start)
         post = self.tree.get(end)
 
@@ -65,6 +312,19 @@ class OrfFinder:
         return substrings
     
     def match_substrings(self, pre, post, startLen, endLen):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         i = 0
         j = len(post)-1
 
@@ -86,6 +346,19 @@ class OrfFinder:
         return res
 
     def retrieve_substrings(self, substrings):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         res = []
         for s in substrings:
             res.append(self.genome[s[0]:s[1]])
@@ -95,18 +368,71 @@ class OrfFinder:
 
 # QUESTION 1: Open Reading Frames
 class AdjacencyListGraph:
+    
     def __init__(self, nodes) -> None:
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         self.length = nodes
         self.graph = [[] for _ in range(nodes)]
 
     def get_adjacent(self, s) -> list:
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         return self.graph[s]
     
     def __len__(self):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         return self.length
 
 @dataclass
 class FNEdge:
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     edge: int
     capacity: int
     reverse: 'FNEdge' = None
@@ -114,7 +440,19 @@ class FNEdge:
 
 class FlowNetwork(AdjacencyListGraph):
     def insert(self, u, t, capacity):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
 
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         forward = FNEdge(t, capacity)
         back = FNEdge(u, 0, forward)
         forward.reverse = back
@@ -125,10 +463,36 @@ class FlowNetwork(AdjacencyListGraph):
         self.maxFlow = False #Flag to check if current flows are max
 
     def __getattribute__(self, name: str) -> Any:
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         return super().__getattribute__(name)
 
 
     def DFSAugment(self, u, t, bottleneck):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         if u==t:
             return bottleneck
 
@@ -146,6 +510,19 @@ class FlowNetwork(AdjacencyListGraph):
 
 
     def fordFulkerson(self, s, t):
+        """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
         flow = 0
         augment = 1
         while augment > 0:
@@ -162,6 +539,19 @@ SHIFTS = 3
 DAYS = 30
 
 def sum_shifts(officers_per_org):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     total = 0
     shiftTotals = [0] * SHIFTS
     shiftRequests = [[] for _ in range(SHIFTS)]
@@ -176,6 +566,19 @@ def sum_shifts(officers_per_org):
     return total, shiftTotals, shiftRequests
 
 def makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_shifts) -> FlowNetwork:
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     """edge ranges: 
         0 supersource, 
         1 excess source, 
@@ -242,15 +645,54 @@ def makeAllocateNetwork(preferences, totalShifts, shiftTotals, min_shifts, max_s
 
 #Allocation Helper Functions
 def getTrueEdge(network, i):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     for edge in network.get_adjacent(i):
         if edge.capacity > 0 and edge.flow == 1: 
             return edge
     return None
     
 def makeRequests(shiftRequest):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     return [[shiftRequest[j].copy() for j in range(SHIFTS)] for _ in range(DAYS)] ##This is aliasing for some reason!!!
 
 def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     """Otherwise, it returns a list of lists allocation, where allocation[i][j][d][k] is equal
     to 1 if 
     security officer SOi
@@ -311,12 +753,38 @@ def makeAllocationList(n, m, network: FlowNetwork, shiftRequest: list[list]):
     return allocation
 
 def potSolExists(preferences, min_shifts, max_shifts, totalShifts):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     n = len(preferences)
     if min_shifts*n > totalShifts or totalShifts > max_shifts*n:
         return False
     return True
 
 def allocate(preferences, officers_per_org, min_shifts, max_shifts):
+    """
+        Function description:
+        Approach:
+        :Input:
+        :Output, return, post condition:
+
+
+        Complexity Analysis
+        :Time complexity: 
+        :Time complexity analysis:
+        :Space complexity: 
+        :Space complexity analysis: 
+        """
     totalShifts, shiftTotals, shiftRequests = sum_shifts(officers_per_org)
 
     if not potSolExists(preferences, min_shifts, max_shifts,totalShifts):
@@ -333,8 +801,8 @@ def allocate(preferences, officers_per_org, min_shifts, max_shifts):
 
 
 if __name__ == '__main__':
-    sol = allocate([[1,1,1], [1,1,1],[1,1,1],[1,1,1]], [[1,1,1]], 0, 25)
-
+    #sol = allocate([[1,1,1], [1,1,1],[1,1,1],[1,1,1]], [[1,1,1]], 0, 25)
+    print(dir())
     #print(sol)
 
 
